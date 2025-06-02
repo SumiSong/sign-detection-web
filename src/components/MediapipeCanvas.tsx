@@ -23,7 +23,7 @@ const MediapipeCanvas: React.FC = () => {
         {isSendDataReady ? '전송 중지' : '서버 전송 시작'}
       </button>
       <VideoFeed videoRef={videoRef} canvasRef={canvasRef} />
-      <CoordinateDisplay coords={coords} />
+      {/* <CoordinateDisplay coords={coords} /> */}
     </div>
   );
 };
