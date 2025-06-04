@@ -1,187 +1,103 @@
-// src/components/HandSequence.tsx
+import type { Landmark, Results } from '@mediapipe/hands';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import drawCanvas from './utils/drawUtils';
+import setCamera from './utils/cameraUtils';
+import setHands from './utils/handsUtils';
+import s from './App.module.css';
 
-import React, { useRef, useEffect } from 'react';
-import axios from 'axios';
-import { Hands, Results, NormalizedLandmarkList } from '@mediapipe/hands';
-import { Camera } from '@mediapipe/camera_utils';
+const App = () => {
 
-interface HandSequenceProps {
-  /**
-   * 서버로 전송할 URL.
-   */
-  serverUrl?: string;
-}
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
-const HandSequence: React.FC<HandSequenceProps> = ({
-  serverUrl = 'http://localhost:5000/ai/sequence_predict',
-}) => {
-  // 1) DOM 참조
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [leftHand, setLeftHand] = useState<Landmark[]>([]);
+  const [rightHand, setRightHand] = useState<Landmark[]>([]);
+  const [frames, setFrames] = useState<{ left: number[]; right: number[] }[]>([]);
 
-  // 193프레임 분량의 84차원 벡터 버퍼
-  const sequenceRef = useRef<number[][]>([]);
-  // 마지막 수집 시각(ms)
-  const lastCollectTimeRef = useRef<number>(0);
-  // 30fps → 프레임 간격 약 33.333ms
-  const FRAME_INTERVAL = 1000 / 30;
-
-  useEffect(() => {
-    if (!videoRef.current) return;
-
-    // Mediapipe Hands 인스턴스 생성
-    const hands = new Hands({
-      locateFile: (file: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-    });
-
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.5,
-      minTrackingConfidence: 0.5,
-    });
-
-    hands.onResults(onResults);
-
-    // Camera 연결
-    const camera = new Camera(videoRef.current, {
-      onFrame: async () => {
-        if (videoRef.current) {
-          await hands.send({ image: videoRef.current });
-        }
-      },
-      width: 640,
-      height: 480,
-    });
-    camera.start();
-
-    return () => {
-      camera.stop();
-      hands.close();
-    };
-  }, []);
-
-  // Mediapipe 결과 처리
-  const onResults = (results: Results) => {
-    // 화면에 현재 프레임 표시
-    drawHands(results);
-
-    const now = Date.now();
-    // 30fps로 정확히 맞춰 수집: 마지막 수집 이후 33.333ms 지났을 때만 수집
-    if (now - lastCollectTimeRef.current < FRAME_INTERVAL) {
-      return;
-    }
-    lastCollectTimeRef.current = now;
-
-    // 손 랜드마크 & 손 구분 정보
-    const multiLandmarks: NormalizedLandmarkList[] = results.multiHandLandmarks || [];
-    const multiHandedness = results.multiHandedness || [];
-
-    let leftLandmarks: NormalizedLandmarkList | null = null;
-    let rightLandmarks: NormalizedLandmarkList | null = null;
-
-    for (let i = 0; i < multiHandedness.length; i++) {
-      const label = multiHandedness[i].label;
-      if (label === 'Left') leftLandmarks = multiLandmarks[i];
-      else if (label === 'Right') rightLandmarks = multiLandmarks[i];
-    }
-
-    if (!leftLandmarks)
-      leftLandmarks = Array.from({ length: 21 }, () => ({ x: 0, y: 0, z: 0 }));
-    if (!rightLandmarks)
-      rightLandmarks = Array.from({ length: 21 }, () => ({ x: 0, y: 0, z: 0 }));
-
-    // 0~1 정규화 값을 그대로 사용하여 84차원 배열 생성
-    const frame84: number[] = [];
-    leftLandmarks.forEach((lm) => {
-      frame84.push(lm.x, lm.y);
-    });
-    rightLandmarks.forEach((lm) => {
-      frame84.push(lm.x, lm.y);
-    });
-    // frame84.length === 84
-
-    const seq = sequenceRef.current;
-    seq.push(frame84);
-
-    if (seq.length === 193) {
-      console.log('193프레임 모임 → 서버 전송');
-      sendToServer(seq);
-      sequenceRef.current = []; // 버퍼 초기화
-    }
-  };
-
-  // 서버 전송
-  const sendToServer = (seq: number[][]) => {
-    const payload = { sequence: seq.map((arr) => [...arr]) };
-    axios
-      .post(serverUrl!, payload, {
-        headers: { 'Content-Type': 'application/json' },
-      })
-      .then((response) => {
-        console.log('서버 응답:', response.data);
-      })
-      .catch((error) => {
-        console.error('전송 에러:', error);
-      });
-  };
-
-  // Canvas에 손 랜드마크 그리기
-  const drawHands = (results: Results) => {
-    const canvasElement = canvasRef.current;
-    if (!canvasElement) return;
-    const canvasCtx = canvasElement.getContext('2d');
+  const onResult = useCallback((results: Results) => {
+    const canvasCtx = canvasRef.current?.getContext('2d');
     if (!canvasCtx) return;
 
-    canvasCtx.save();
-    canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+    drawCanvas(canvasCtx, results);
 
-    if (results.multiHandLandmarks) {
-      for (const landmarks of results.multiHandLandmarks) {
-        for (let i = 0; i < landmarks.length; i++) {
-          const x = landmarks[i].x * canvasElement.width;
-          const y = landmarks[i].y * canvasElement.height;
-          canvasCtx.beginPath();
-          canvasCtx.arc(x, y, 4, 0, 2 * Math.PI);
-          canvasCtx.fillStyle = 'red';
-          canvasCtx.fill();
-        }
+    if (!results.multiHandLandmarks || !results.multiHandedness) return;
+
+    let left: number[] = [];
+    let right: number[] = [];
+
+    results.multiHandedness.forEach((hand, i) => {
+      const label = hand.label;
+      const landmarks = results.multiHandLandmarks![i];
+      const xy = landmarks.flatMap(p => [p.x, p.y]);
+
+      if (label === 'Left') {
+        setLeftHand(landmarks);
+        left = xy;
+      } else if (label === 'Right') {
+        setRightHand(landmarks);
+        right = xy;
       }
-    }
+    });
 
-    canvasCtx.restore();
-  };
+    if (left.length === 0) left = Array(42).fill(0);
+    if (right.length === 0) right = Array(42).fill(0);
+
+    setFrames(prev => [...prev, { left, right }]);
+  }, []);
+
+
+  useEffect(() => {
+    if (!videoRef.current || !canvasRef.current) return;
+    const video = videoRef.current;
+    const hands = setHands();
+    hands.onResults(onResult);
+    const camera = setCamera(video, hands, 1280, 720);
+    return () => { camera.stop(); canvasRef.current = null; }
+  }, [])
 
   return (
-    <div style={{ position: 'relative', width: 640, height: 480 }}>
-      <video
-        ref={videoRef}
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          width: 640,
-          height: 480,
-          objectFit: 'cover',
-        }}
-        autoPlay
-        playsInline
-        muted
-      />
-      <canvas
-        ref={canvasRef}
-        width={640}
-        height={480}
-        style={{
-          position: 'absolute',
-          left: 0,
-          top: 0,
-          pointerEvents: 'none',
-        }}
-      />
+    <div>
+      <video ref={videoRef} style={{ display: 'none' }} />
+      <canvas ref={canvasRef} width={1280} height={720} />
+      <button onClick={() => {
+        const blob = new Blob([JSON.stringify(frames, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `landmarks_${Date.now()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }}>JSON 저장</button>
+      <div className={s.landmarksContainer}>
+        <div className={s.leftHandContainer}>
+          <div>왼손</div>
+          <div className={s.left}>
+            {
+              leftHand.map((p, i) => (
+                <div key={i} className={s.leftHand}>
+                  <div>{i} X : {p.x.toFixed(3)}</div>
+                  <div>{i} Y : {p.y.toFixed(3)}</div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+        <div className={s.rightHandContainer}>
+          <div>오른손</div>
+          <div className={s.right}>
+            {
+              rightHand.map((p, i) => (
+                <div key={i} className={s.rightHand}>
+                  <div>{i} X : {p.x.toFixed(3)}</div>
+                  <div>{i} Y : {p.y.toFixed(3)}</div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      </div>
     </div>
-  );
-};
+  )
+}
 
-export default HandSequence;
-  
+export default App;
