@@ -15,10 +15,19 @@ const App = () => {
   const [leftHand, setLeftHand] = useState<Landmark[]>([]);
   const [rightHand, setRightHand] = useState<Landmark[]>([]);
   const [frames, setFrames] = useState<{ left: number[]; right: number[] }[]>([]);
+  const [frameCount, setFrameCount] = useState(0);
+  const [maxFrame, setMaxFrame] = useState<number>(0);
   const [isRecord, setIsRecord] = useState(false);
   const [count, setCount] = useState(3);
-
+  const frameCountRef = useRef(frameCount);
   const isRecordRef = useRef(isRecord);
+  const maxFrameRef = useRef(maxFrame);
+  useEffect(()=>{
+    maxFrameRef.current = maxFrame;
+  },[maxFrame])
+  useEffect(()=>{    
+    frameCountRef.current = frameCount + 1;
+  }, [frameCount])
   useEffect(() => {
     isRecordRef.current = isRecord;
   }, [isRecord]);
@@ -38,7 +47,7 @@ const App = () => {
       const label = hand.label;
       const landmarks = results.multiHandLandmarks![i];
       const xy = landmarks.flatMap(p => [p.x, p.y]);
-
+      
       if (label === 'Left') {
         setLeftHand(landmarks);
         left = xy;
@@ -50,9 +59,17 @@ const App = () => {
 
     if (left.length === 0) left = Array(42).fill(0);
     if (right.length === 0) right = Array(42).fill(0);
-
+    
     if (isRecordRef.current) {
-      setFrames(prev => [...prev, { left, right }]);
+      if(frameCountRef.current >= maxFrameRef.current){
+        console.log('중지');
+        setIsRecord(false);
+      } else {
+        console.log('기록 중');
+        
+        setFrameCount(p=>p+1);
+        setFrames(prev => [...prev, { left, right }]);
+      }
     }
   }, []);
 
@@ -81,6 +98,7 @@ const App = () => {
         clearInterval(intervalRef.current);
         intervalRef.current = null;
       }
+      setFrameCount(0);
       setCount(3);
     } else {
       setCount(3);
@@ -102,6 +120,7 @@ const App = () => {
   return (
     <div>
       <h1>{count===0?'녹화 중':`녹화 시작까지 : ${count}`}</h1>
+      <div>몇 개 데이터 생성하세요?</div><input value={maxFrame} onChange={(e:React.ChangeEvent<HTMLInputElement>)=>setMaxFrame(Number(e.target.value))} placeholder='몇 개 만드십니까?'/>
       <video ref={videoRef} style={{ display: 'none' }} />
       <canvas ref={canvasRef} width={1280} height={720} />
       <button onClick={handleRecord}>녹화 {isRecord ? "중지" : "시작"}</button>
