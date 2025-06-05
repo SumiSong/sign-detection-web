@@ -1,3 +1,26 @@
+.dataInput{
+    width: 100%;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 50px;
+}
+.dataButton{
+    display: flex;
+    width: 100%;
+    gap: 20px;
+}
+.dataButton button{
+    padding: 10px;
+    background-color:gray;
+    border: none;
+    border-radius: 7px;
+    margin-bottom: 30px;
+}
+.dataInput input{
+    padding: 10px;
+    outline: none;
+}
 .landmarksContainer{
     display: flex;
     justify-content: space-around;
