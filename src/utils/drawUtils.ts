@@ -1,33 +1,20 @@
-import type { Results, NormalizedLandmark } from '@mediapipe/holistic';
+import { drawConnectors, drawLandmarks } from "@mediapipe/drawing_utils";
+import { HAND_CONNECTIONS, type Results } from "@mediapipe/hands"
 
-function drawLandmarks(
-  ctx: CanvasRenderingContext2D,
-  landmarks: NormalizedLandmark[] | undefined,
-  color: string,
-  width: number
-) {
-  if (!landmarks) return;
-
-  ctx.fillStyle = color;
-  for (const landmark of landmarks) {
-    const x = landmark.x * ctx.canvas.width;
-    const y = landmark.y * ctx.canvas.height;
-
-    ctx.beginPath();
-    ctx.arc(x, y, width, 0, 2 * Math.PI);
-    ctx.fill();
+const drawCanvas = (ctx: CanvasRenderingContext2D, result: Results) => {
+  const width = ctx.canvas.width;
+  const height = ctx.canvas.height;
+  ctx.save();
+  ctx.setTransform(-1, 0, 0, 1, width, 0); // 좌우 반전 단축 표현
+  ctx.clearRect(0, 0, width, height);
+  ctx.drawImage(result.image, 0, 0, width, height);
+  if (result.multiHandLandmarks) {
+    for (const landmark of result.multiHandLandmarks) {
+      drawConnectors(ctx, landmark, HAND_CONNECTIONS, { color: '#00F00', lineWidth: 5 });
+      drawLandmarks(ctx, landmark, { color: '#FF0000', lineWidth: 1, radius: 5 });
+    }
   }
+  ctx.restore();
+
 }
-
-export function drawKeypoints(results: Results, canvas: HTMLCanvasElement, video: HTMLVideoElement) {
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
-
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-  drawLandmarks(ctx, results.poseLandmarks, 'red', 5);
-  drawLandmarks(ctx, results.faceLandmarks, 'green', 2);
-  drawLandmarks(ctx, results.leftHandLandmarks, 'blue', 5);
-  drawLandmarks(ctx, results.rightHandLandmarks, 'purple', 5);
-}
+export default drawCanvas;
