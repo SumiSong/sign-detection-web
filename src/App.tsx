@@ -84,7 +84,7 @@ const App = () => {
       }
     }
     if (isSendToServerRef.current) {
-      axios.post('http://localhost:8080/ai/predict', {left, right}, {
+      axios.post('http://localhost:5000/ai/predict', {left, right}, {
         headers: {
           'Content-Type': 'application/json',
         },
