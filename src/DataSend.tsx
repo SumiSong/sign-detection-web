@@ -18,7 +18,6 @@ const DataSend = () => {
     const handsRef = useRef<ReturnType<typeof setHands> | null>(null);
     const cameraRef = useRef<ReturnType<typeof setCamera> | null>(null);
     useEffect(() => {
-        console.log('effect 작동');
         
         isSendToServerRef.current = isSendToServer;
     }, [isSendToServer])
@@ -48,7 +47,6 @@ const DataSend = () => {
         if (left.length === 0) left = Array(42).fill(0);
         if (right.length === 0) right = Array(42).fill(0);
         if (isSendToServerRef.current) {
-            console.log('서버 호출');
             
             axios.post('http://localhost:5000/ai/predict', { left, right }, {
                 headers: {
@@ -106,7 +104,6 @@ const DataSend = () => {
         serverCheck()
     },[])
     const sendServer = () => {
-        console.log('sendServer 함수 호출 현재 상태 : ', isSendToServer);
         
         setIsSendToServer(p => !p);
     }
