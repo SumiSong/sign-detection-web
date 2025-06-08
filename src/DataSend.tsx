@@ -21,6 +21,8 @@ const DataSend = () => {
         
         isSendToServerRef.current = isSendToServer;
     }, [isSendToServer])
+
+    const lastSentRef = useRef<number>(0);
     const onResult = useCallback((results: Results) => {
         const canvasCtx = canvasRef.current?.getContext('2d');
         if (!canvasCtx) return;
@@ -46,8 +48,12 @@ const DataSend = () => {
 
         if (left.length === 0) left = Array(42).fill(0);
         if (right.length === 0) right = Array(42).fill(0);
-        if (isSendToServerRef.current) {
-            
+
+        const now = Date.now();
+        const sendInterval = 300;
+
+        if (isSendToServerRef.current && now - lastSentRef.current > sendInterval) {
+            lastSentRef.current = now;
             axios.post('http://localhost:5000/ai/predict', { left, right }, {
                 headers: {
                     'Content-Type': 'application/json',
@@ -65,6 +71,7 @@ const DataSend = () => {
                     }
                 });
         }
+        
     }, []);
     useEffect(() => {
         if (!videoRef.current || !canvasRef.current) return;
