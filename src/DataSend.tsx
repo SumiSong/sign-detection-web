@@ -67,6 +67,23 @@ const DataSend = () => {
                     }
                 });
         }
+        // axios.post('http://localhost:5000/ai/predict', { left, right }, {
+        //         headers: {
+        //             'Content-Type': 'application/json',
+        //         },
+        //     })
+        //         .then(res => {
+        //             setMsg(res.data);
+        //         })
+        //         .catch(err => {
+        //             console.error('서버 전송 실패:', err);
+        //             if (err.message === 'Network Error') {
+        //                 setMsg(`서버가 켜져있는지 확인하세요. 응답 메세지 : ${err.message}`);
+        //             } else {
+        //                 setMsg(err.message);
+        //             }
+        //         });
+        
     }, []);
     useEffect(() => {
         if (!videoRef.current || !canvasRef.current) return;
