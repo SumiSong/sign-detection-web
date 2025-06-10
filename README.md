@@ -1,54 +1,51 @@
-# Mediapipe Coordinate Sender
+# 🤟 Hand Gesture Sign Language Translator
 
-웹캠을 통해 실시간으로 얼굴, 포즈, 양손의 키포인트를 추출하고, 해당 좌표를 Flask 서버로 주기적으로 전송하는 React + MediaPipe 기반 프로젝트입니다.
+> MediaPipe와 React를 이용한 실시간 수어 인식 및 데이터 수집 프로젝트
 
-## 주요 기능
+## 📁 프로젝트 구조
 
-- **MediaPipe Holistic**을 활용한 얼굴 / 포즈 / 손 좌표 추출
-- 실시간 영상에서 keypoint 좌표 시각화 (캔버스 렌더링)
-- 버튼 클릭으로 좌표 전송 시작 / 중지 제어
-- `axios`로 Flask 서버에 30ms 간격으로 좌표 데이터 전송
-- `1280x720`, `60fps`로 제한된 웹캠 스트리밍
+이 프로젝트는 손 제스처를 기반으로 **실시간 수어 예측**을 수행하며, 학습 데이터를 손쉽게 **녹화 및 JSON으로 저장**할 수 있는 기능도 함께 제공합니다.
+
+- `/submit` : 실시간 수어 데이터를 AI 서버로 전송하여 예측 결과를 받아오는 페이지
+- `/` : 손 좌표 데이터를 수집하여 JSON 파일로 저장할 수 있는 데이터 생성 페이지
 
 ---
 
-## 프로젝트 구조
-App.tsx # 루트
-MediapipeCanvas.tsx # 메인 컴포넌트
-VideoFeed.tsx # 비디오 + 캔버스 렌더링
-CoordinateDisplay.tsx # 좌표 텍스트 출력
-useHolisticCamera.ts # MediaPipe 처리 및 전송
-types.ts # 좌표 타입 정의
+## 🚀 주요 기능
 
-## 설치 및 실행
+### 1. 실시간 수어 예측 (`/submit`)
+- MediaPipe Hands를 통해 손 좌표 실시간 추출
+- 좌표 데이터를 `POST /ai/predict` 로 전송
+- 서버에서 응답받은 예측 결과를 화면에 표시
+- `/health` 엔드포인트를 통해 서버 상태 사전 확인
+
+### 2. 수어 학습용 데이터 생성 (`/`)
+- 녹화 시작 타이머 및 프레임 수 지정 기능
+- 최대 프레임 수 만큼 좌표 자동 기록
+- 기록된 데이터는 JSON 형식으로 다운로드 가능
+
+---
+
+## 🧠 사용 기술
+
+- **React 18**
+- **MediaPipe Hands (via @mediapipe/hands)**
+- **TypeScript**
+- **Axios**
+- **React Router v6**
+- **CSS Module**
+
+---
+
+## ⚙️ 설치 및 실행 방법
 
 ```bash
+# 1. 리포지토리 클론
+git clone https://github.com/your-id/your-repo.git
+cd your-repo
+
+# 2. 의존성 설치
 npm update
+
+# 3. 실행
 npm run dev
-```
-
-⚠️ 서버는 로컬 Flask 백엔드가 http://localhost:5000/ai/keypoints 엔드포인트를 갖고 있어야 합니다.
-
-- React 19
-
-- TypeScript
-
-- MediaPipe Holistic
-
-- Axios
-
-- HTML5 Webcam API (getUserMedia)
-
-- Canvas API
-
-## 전송 데이터 예시
-```json
-{
-  "coords": {
-    "face_keypoints_2d": [123, 456],
-    "pose_keypoints_2d": [789, 321],
-    "hand_left_keypoints_2d": [100, 200],
-    "hand_right_keypoints_2d": [300, 400]
-  }
-}
-```

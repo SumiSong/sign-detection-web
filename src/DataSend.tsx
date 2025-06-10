@@ -12,16 +12,22 @@ const DataSend = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isSendToServer, setIsSendToServer] = useState(false);
-    const [msg, setMsg] = useState('이 곳에 메세지가 표시됩니다.');
+    const [msg, setMsg] = useState<string[]>([]);
     const [isServerOpen, setIsServerOpen] = useState('loading');
+    const [msgColor, setMsgColor] = useState('black');
     const isSendToServerRef = useRef(isSendToServer);
     const handsRef = useRef<ReturnType<typeof setHands> | null>(null);
     const cameraRef = useRef<ReturnType<typeof setCamera> | null>(null);
+    const lastMsgRef = useRef('');
     useEffect(() => {
-        console.log('effect 작동');
-        
+        lastMsgRef.current = msg[msg.length - 1];
+    }, [msg]);
+    useEffect(() => {
+
         isSendToServerRef.current = isSendToServer;
     }, [isSendToServer])
+
+    const lastSentRef = useRef<number>(0);
     const onResult = useCallback((results: Results) => {
         const canvasCtx = canvasRef.current?.getContext('2d');
         if (!canvasCtx) return;
@@ -45,45 +51,45 @@ const DataSend = () => {
             }
         });
 
+        if (left.length === 0 && right.length === 0) return;
+
         if (left.length === 0) left = Array(42).fill(0);
         if (right.length === 0) right = Array(42).fill(0);
-        if (isSendToServerRef.current) {
-            console.log('서버 호출');
-            
+
+        const now = Date.now();
+        const sendInterval = 1000;
+
+        if (isSendToServerRef.current && now - lastSentRef.current > sendInterval) {
+            lastSentRef.current = now;
             axios.post('http://localhost:5000/ai/predict', { left, right }, {
                 headers: {
                     'Content-Type': 'application/json',
                 },
             })
                 .then(res => {
-                    setMsg(res.data);
+                    if (res.data) {
+                        if (res.data+' ' !== lastMsgRef.current) {
+                            
+                            switch (res.data) {
+                                case '검정': setMsgColor('black'); break;
+                                case '파랑': setMsgColor('blue'); break;
+                                case '내려쓰기': setMsg(p => ([...p, '내려쓰기 '])); break;
+
+                                default: setMsg(p => ([...p, res.data+' ']));
+                            }
+                        }
+                    }
                 })
                 .catch(err => {
                     console.error('서버 전송 실패:', err);
                     if (err.message === 'Network Error') {
-                        setMsg(`서버가 켜져있는지 확인하세요. 응답 메세지 : ${err.message}`);
+                        // setMsg(`서버가 켜져있는지 확인하세요. 응답 메세지 : ${err.message}`);
                     } else {
                         setMsg(err.message);
                     }
                 });
         }
-        // axios.post('http://localhost:5000/ai/predict', { left, right }, {
-        //         headers: {
-        //             'Content-Type': 'application/json',
-        //         },
-        //     })
-        //         .then(res => {
-        //             setMsg(res.data);
-        //         })
-        //         .catch(err => {
-        //             console.error('서버 전송 실패:', err);
-        //             if (err.message === 'Network Error') {
-        //                 setMsg(`서버가 켜져있는지 확인하세요. 응답 메세지 : ${err.message}`);
-        //             } else {
-        //                 setMsg(err.message);
-        //             }
-        //         });
-        
+
     }, []);
     useEffect(() => {
         if (!videoRef.current || !canvasRef.current) return;
@@ -110,33 +116,44 @@ const DataSend = () => {
             }
         };
     }, [onResult]);
-    useEffect(()=>{
+    useEffect(() => {
         const serverCheck = async () => {
-            try{
+            try {
                 const res = await axios.get('http://localhost:5000/health');
                 setIsServerOpen('ok');
-            } catch(err){
+            } catch (err) {
                 setIsServerOpen('close');
             }
 
         }
         serverCheck()
-    },[])
+    }, [])
     const sendServer = () => {
-        console.log('sendServer 함수 호출 현재 상태 : ', isSendToServer);
-        
+
         setIsSendToServer(p => !p);
     }
     return (
         <div className={s.container}>
             <h1>실시간 수어 번역하기</h1>
             <p style={{
-                fontSize:12,
-                color: isServerOpen==='loading'?'yellow':isServerOpen==='close'?'red':'green'
-            }}>{isServerOpen==='loading'?'상태 체크 중..':isServerOpen==='close'?'AI가 자고 있어요.':'준비 완료'}</p>
-            <div style={{marginBottom:20}}>{msg}</div>
-            <div className={s.canvasWrapper}>
-                <canvas ref={canvasRef} width={1280} height={720} />
+                fontSize: 12,
+                color: isServerOpen === 'loading' ? 'yellow' : isServerOpen === 'close' ? 'red' : 'green'
+            }}>{isServerOpen === 'loading' ? '상태 체크 중..' : isServerOpen === 'close' ? 'AI가 자고 있어요.' : '준비 완료'}</p>
+            {/* <div style={{ marginBottom: 20 }}>{msg}</div> */}
+            <div className={s.canvasResult}>
+                <div className={s.canvasWrapper}>
+                    <canvas ref={canvasRef} width={1280} height={720} />
+                </div>
+                <section className={s.resultContainer}>
+                <h3>결과</h3>
+                <div className={s.result} style={{color:msgColor}}>
+                    {
+                        msg.map((m, i)=>(
+                            m==='내려쓰기 '?<br key={i}/>:<span key={i}>{m}</span>
+                        ))
+                    }
+                </div>
+                </section>
             </div>
 
             <div className={s.buttonsWrapper}>
@@ -144,7 +161,7 @@ const DataSend = () => {
                     {isSendToServer ? '그만하기' : '수어 번역하기'}
                 </button>
             </div>
-            <button onClick={()=>nav('/')}>데이터 만들러가기</button>
+            <button onClick={() => nav('/')}>데이터 만들러가기</button>
 
             <video ref={videoRef} style={{ display: 'none' }} />
         </div >

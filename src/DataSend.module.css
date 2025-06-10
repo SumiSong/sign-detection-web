@@ -14,13 +14,27 @@
   margin-bottom: 2rem;
   text-shadow: 1px 1px 2px #00000066;
 }
-
+.canvasResult{
+  display: flex;
+  gap: 20px;
+}
 .canvasWrapper {
   position: relative;
   box-shadow: 0 0 30px rgba(121, 101, 193, 0.3);
   border-radius: 16px;
   overflow: hidden;
   margin-bottom: 2rem;
+  flex: 0.7;
+}
+.resultContainer{
+  flex: 0.3;
+}
+.result{
+  background-color: rgb(212, 212, 212);
+  overflow-y: scroll;
+  padding: 20px;
+  border-radius: 7px;
+  height: 60%;
 }
 .inputWrapper {
   display: flex;

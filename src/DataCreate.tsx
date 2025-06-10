@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import drawCanvas from './utils/drawUtils';
 import setCamera from './utils/cameraUtils';
 import setHands from './utils/handsUtils';
-import axios from 'axios';
 import s from './DataCreate.module.css';
 import { useNavigate } from 'react-router-dom';
 
